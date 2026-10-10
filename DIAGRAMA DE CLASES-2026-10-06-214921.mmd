@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    actor Cliente as Cliente / Web
+    participant Ventas as Módulo de Ventas
+    participant Inventario as Módulo de Inventario
+    participant Compras as Módulo de Compras
+    participant Cola as Cola de Eventos
+
+    Cliente->>Ventas: solicitarPedido(idPedido)
+    activate Ventas
+
+    %% Validación síncrona
+    Ventas->>Inventario: validarSaldoYStock(idPedido)
+    activate Inventario
+    Inventario-->>Ventas: validacionExitosa(stockDisponible=true)
+    deactivate Inventario
+
+    alt stockDisponible = true
+        Ventas->>Ventas: confirmarPedido()
+        Ventas--)Cola: publicarEvento("PedidoConfirmado")
+        Ventas-->>Cliente: Pedido aprobado
+    else stockDisponible = false
+        opt generarAlerta
+            Ventas->>Compras: generarAlertaStockFaltante(idPedido)
+            activate Compras
+            Compras-->>Ventas: alertaRegistrada
+            deactivate Compras
+        end
+        Ventas-->>Cliente: Pedido rechazado por falta de stock
+    end
+
+    deactivate Ventas
